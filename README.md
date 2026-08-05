@@ -61,22 +61,23 @@ No bundler, no `npm install`. One file, vanilla JS, hand-rolled SVG.
 **GitHub Pages.** Rename `psyche-protocol-lab.html` to `index.html`, push, then
 Settings → Pages → Source: `main` / root. Live in about a minute.
 
-**Hermes Doctor** works two ways:
+**Hermes Doctor uses your own key.** Paste a [Nous Portal](https://portal.nousresearch.com/) key
+into the panel; it stays in memory for that tab and is never stored, logged, or sent anywhere except
+Nous's inference API. Nothing to configure, and nobody is spending anyone else's credit.
 
-| Mode | Setup | Use when |
-|---|---|---|
-| Bring your own key | Nothing. Visitors paste their own Nous Portal key; it stays in memory and is never stored. | Local use, or a demo where visitors have their own keys. |
-| Proxy (recommended) | Deploy `worker.js`, set `PROXY_URL` in the HTML. | Anything public. |
+If you'd rather host the key yourself so visitors don't need one, `worker.js` is an optional
+Cloudflare Worker proxy — set `PROXY_URL` in the HTML and the key field disappears:
 
 ```bash
-npx wrangler secret put NOUS_API_KEY     # your Nous Portal key
+npx wrangler kv namespace create RATE_LIMIT   # paste the id into wrangler.toml
+npx wrangler secret put NOUS_API_KEY
 npx wrangler deploy
-# then set PROXY_URL near the top of the Hermes section in the HTML
 ```
 
-The Worker keeps the key server-side and enforces an origin allowlist, a model allowlist, a prompt
-size cap, a `max_tokens` ceiling, and optional per-IP rate limiting via KV. Never ship the key in
-client-side JS — anyone can read it.
+It enforces an origin allowlist, a model allowlist, a prompt-size cap, a `max_tokens` ceiling, a
+per-IP hourly limit, and a global daily budget — and refuses to serve at all if the KV binding is
+missing, so the key can never end up behind an unmetered endpoint. Never put the key in
+client-side JS; anyone can read it.
 
 > **CORS note:** calling the inference API directly from a browser may be blocked. If it is, the
 > proxy is not optional, it's the fix.

@@ -2,17 +2,27 @@ name = "psyche-lab-proxy"
 main = "worker.js"
 compatibility_date = "2026-08-01"
 
+# ─────────────────────────────────────────────────────────────
+# OPTIONAL. The live demo does NOT use this — visitors bring
+# their own Nous Portal key. Deploy this only if you want to
+# host the key yourself, and read the spend controls first:
+# the worker refuses to serve unless RATE_LIMIT is bound, so a
+# key can never sit behind an unmetered endpoint.
+# ─────────────────────────────────────────────────────────────
+
 [vars]
-# Comma-separated. Leave empty to allow any origin (fine while testing).
-# Set this to your GitHub Pages URL before you share the link publicly.
+# Requests from any other origin are refused.
 ALLOWED_ORIGINS = "https://izmiradami.github.io"
 
-# Optional but recommended — enables per-IP rate limiting.
-# 1. npx wrangler kv namespace create RATE_LIMIT
-# 2. paste the returned id below and uncomment.
-# [[kv_namespaces]]
-# binding = "RATE_LIMIT"
-# id = "PASTE_ID_HERE"
+# Hard ceiling on total requests per day across all visitors.
+DAILY_BUDGET = "200"
+
+# REQUIRED:
+#   npx wrangler kv namespace create RATE_LIMIT
+#   paste the returned id below
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "PASTE_ID_HERE"
 
 # Secret (never put the key in this file):
 #   npx wrangler secret put NOUS_API_KEY

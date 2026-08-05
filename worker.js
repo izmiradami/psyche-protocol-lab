@@ -19,8 +19,9 @@ const ALLOWED_MODELS = new Set([
 
 const MAX_TOKENS = 800;      // hard cap on completion length
 const MAX_CHARS  = 12000;    // hard cap on inbound prompt size
-const LIMIT      = 20;       // requests per IP per window
+const LIMIT      = 8;        // requests per IP per window
 const WINDOW     = 3600;     // window, seconds
+const DAILY      = 200;      // total requests per day across ALL visitors (your wallet's ceiling)
 
 function cors(origin, allowed) {
   const ok = allowed.length === 0 || allowed.includes(origin);
@@ -54,15 +55,29 @@ export default {
     if (!env.NOUS_API_KEY)
       return json({ error: 'NOUS_API_KEY secret is not configured' }, 500, head);
 
-    // ── rate limit (optional: bind a KV namespace named RATE_LIMIT) ──
-    if (env.RATE_LIMIT) {
-      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-      const key = `rl:${ip}:${Math.floor(Date.now() / 1000 / WINDOW)}`;
-      const used = parseInt((await env.RATE_LIMIT.get(key)) || '0', 10);
-      if (used >= LIMIT)
-        return json({ error: `rate limit: ${LIMIT} requests/hour` }, 429, head);
-      await env.RATE_LIMIT.put(key, String(used + 1), { expirationTtl: WINDOW });
-    }
+    // ── spend controls ──
+    // Without a KV binding there is NO rate limit and NO budget ceiling, which means
+    // anyone who finds this URL can burn your credit. Refuse to serve in that case.
+    if (!env.RATE_LIMIT)
+      return json({ error: 'budget_exhausted', detail: 'proxy misconfigured: RATE_LIMIT KV not bound' }, 429, head);
+
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+
+    // per-IP hourly limit
+    const ipKey = `rl:${ip}:${Math.floor(Date.now() / 1000 / WINDOW)}`;
+    const ipUsed = parseInt((await env.RATE_LIMIT.get(ipKey)) || '0', 10);
+    if (ipUsed >= LIMIT)
+      return json({ error: 'rate_limited', detail: `${LIMIT} requests/hour per IP` }, 429, head);
+
+    // global daily budget — the hard ceiling on what this demo can cost you
+    const cap = parseInt(env.DAILY_BUDGET || DAILY, 10);
+    const dayKey = `day:${new Date().toISOString().slice(0, 10)}`;
+    const dayUsed = parseInt((await env.RATE_LIMIT.get(dayKey)) || '0', 10);
+    if (dayUsed >= cap)
+      return json({ error: 'budget_exhausted', detail: `daily demo budget of ${cap} requests reached` }, 429, head);
+
+    await env.RATE_LIMIT.put(ipKey, String(ipUsed + 1), { expirationTtl: WINDOW });
+    await env.RATE_LIMIT.put(dayKey, String(dayUsed + 1), { expirationTtl: 172800 });
 
     // ── validate body ──
     let body;
