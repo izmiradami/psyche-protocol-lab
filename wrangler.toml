@@ -1,0 +1,18 @@
+name = "psyche-lab-proxy"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+
+[vars]
+# Comma-separated. Leave empty to allow any origin (fine while testing).
+# Set this to your GitHub Pages URL before you share the link publicly.
+ALLOWED_ORIGINS = "https://izmiradami.github.io"
+
+# Optional but recommended — enables per-IP rate limiting.
+# 1. npx wrangler kv namespace create RATE_LIMIT
+# 2. paste the returned id below and uncomment.
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT"
+# id = "PASTE_ID_HERE"
+
+# Secret (never put the key in this file):
+#   npx wrangler secret put NOUS_API_KEY

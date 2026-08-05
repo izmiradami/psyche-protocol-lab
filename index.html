@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Psyche Protocol Lab</title>
+<style>
+  :root{
+    --bg:#07080d; --panel:#0e1018; --panel2:#141727; --line:#222839;
+    --txt:#e6e9f2; --dim:#8d95ad; --faint:#5a6178;
+    --acc:#7c5cff; --acc2:#00d4ff; --ok:#22d39a; --warn:#ffb020; --bad:#ff5470;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:radial-gradient(1200px 700px at 50% -10%,#161a2e 0%,var(--bg) 60%);
+    color:var(--txt);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:13px;overflow-x:hidden;
+  }
+  header{
+    display:flex;align-items:center;gap:14px;padding:12px 18px;
+    border-bottom:1px solid var(--line);background:rgba(10,12,20,.85);
+    backdrop-filter:blur(10px);position:sticky;top:0;z-index:20;flex-wrap:wrap;
+  }
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;letter-spacing:-.2px}
+  .logo .dot{width:9px;height:9px;border-radius:50%;background:var(--acc);box-shadow:0 0 12px var(--acc)}
+  .logo small{font-weight:500;color:var(--faint);font-size:11px;letter-spacing:.4px;text-transform:uppercase}
+  .spacer{flex:1}
+  button,select,input[type=number]{font-family:inherit;font-size:12px;color:var(--txt)}
+  .btn{
+    background:var(--panel2);border:1px solid var(--line);border-radius:7px;
+    padding:6px 12px;cursor:pointer;transition:.15s;font-weight:600;
+  }
+  .btn:hover{border-color:var(--acc);background:#1b1f33}
+  .btn.pri{background:linear-gradient(135deg,var(--acc),#5b3ee8);border-color:transparent}
+  .btn.pri:hover{filter:brightness(1.15)}
+  .btn.sm{padding:4px 9px;font-size:11px;font-weight:500}
+  .seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .seg button{background:transparent;border:0;padding:6px 11px;cursor:pointer;font-weight:600;color:var(--dim)}
+  .seg button.on{background:var(--acc);color:#fff}
+
+  main{display:grid;grid-template-columns:270px minmax(0,1fr) 300px;gap:14px;padding:14px 18px 30px;align-items:start}
+  @media(max-width:1150px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .card h3{
+    margin:0;padding:10px 13px;font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;
+    color:var(--faint);border-bottom:1px solid var(--line);font-weight:700;
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+  }
+  .card .body{padding:12px 13px}
+
+  .field{margin-bottom:11px}
+  .field label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;color:var(--dim);font-size:11.5px}
+  .field label b{color:var(--acc2);font-family:var(--mono);font-size:11.5px;font-weight:600}
+  .field input[type=range]{width:100%;accent-color:var(--acc);height:3px;cursor:pointer}
+  .field .hint{color:var(--faint);font-size:10px;margin-top:3px;line-height:1.4}
+  select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;cursor:pointer}
+
+  .stage{position:relative;display:flex;justify-content:center;background:
+    radial-gradient(600px 400px at 50% 45%,rgba(124,92,255,.09),transparent 70%);}
+  svg{width:100%;height:auto;max-width:660px;display:block}
+  .phaseTag{
+    position:absolute;top:12px;left:13px;display:flex;flex-direction:column;gap:3px;pointer-events:none;
+  }
+  .phaseTag .p{font-size:19px;font-weight:800;letter-spacing:-.4px}
+  .phaseTag .r{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .legend{display:flex;flex-wrap:wrap;gap:9px;padding:9px 13px;border-top:1px solid var(--line);font-size:10.5px;color:var(--dim)}
+  .legend i{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
+
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+  .stat{background:var(--panel);padding:9px 11px}
+  .stat .k{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);font-weight:700}
+  .stat .v{font-family:var(--mono);font-size:16px;font-weight:600;margin-top:2px}
+
+  .meter{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden;margin-top:6px}
+  .meter>div{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .2s}
+
+  .log{height:250px;overflow-y:auto;font-family:var(--mono);font-size:10.5px;line-height:1.65;padding:9px 11px}
+  .log div{display:flex;gap:7px;padding:1px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+  .log .ts{color:var(--faint);flex:none}
+  .log .i{color:var(--dim)} .log .g{color:var(--ok)} .log .w{color:var(--warn)} .log .e{color:var(--bad)} .log .a{color:var(--acc2)}
+  .log::-webkit-scrollbar{width:6px}.log::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+
+  .batches{display:flex;flex-wrap:wrap;gap:4px;padding:11px 13px}
+  .b{
+    width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:9.5px;font-weight:700;border:1px solid var(--line);
+    background:var(--panel2);color:var(--faint);transition:.2s;position:relative;
+  }
+  .b.assigned{border-color:var(--acc);color:var(--acc2)}
+  .b.done{background:rgba(34,211,154,.16);border-color:var(--ok);color:var(--ok)}
+
+  .fsm{display:flex;align-items:center;gap:5px;padding:12px 13px;flex-wrap:wrap;justify-content:center}
+  .fsm .n{
+    padding:6px 11px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);
+    font-size:10.5px;font-weight:700;color:var(--dim);transition:.25s;white-space:nowrap;
+  }
+  .fsm .n.on{background:var(--acc);border-color:var(--acc);color:#fff;box-shadow:0 0 20px rgba(124,92,255,.5)}
+  .fsm .ar{color:var(--faint);font-size:12px}
+
+  pre{
+    margin:0;padding:12px 13px;font-family:var(--mono);font-size:10.5px;line-height:1.6;
+    white-space:pre;overflow-x:auto;color:#c9d1e6;max-height:330px;
+  }
+  pre .c{color:var(--faint)} pre .k{color:var(--acc2)} pre .s{color:var(--ok)} pre .n{color:var(--warn)}
+  .row{display:flex;gap:7px;flex-wrap:wrap}
+  .tip{padding:9px 13px;color:var(--faint);font-size:10.5px;line-height:1.55;border-top:1px solid var(--line)}
+  .pill{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);color:var(--dim)}
+
+  textarea,input[type=password],input[type=text]{
+    width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+    padding:7px 9px;color:var(--txt);font-family:var(--mono);font-size:10.5px;resize:vertical;
+  }
+  textarea:focus,input:focus{outline:none;border-color:var(--acc)}
+  .hermes{padding:11px 13px;display:flex;flex-direction:column;gap:8px}
+  .hermes .lbl{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.8px;font-weight:700}
+  .ans{
+    background:var(--panel2);border:1px solid var(--line);border-left:2px solid var(--acc);
+    border-radius:6px;padding:10px 11px;font-size:11.5px;line-height:1.6;white-space:pre-wrap;
+    max-height:300px;overflow-y:auto;color:#d5dbec;
+  }
+  .ans:empty{display:none}
+  .keyrow{display:flex;gap:6px}
+  .keyrow input{flex:1}
+  .warn-note{font-size:9.5px;color:var(--warn);line-height:1.45;opacity:.85}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="dot"></span>Psyche Protocol Lab <small id="tagline">coordinator state machine simulator</small></div>
+  <div class="spacer"></div>
+  <div class="row">
+    <button class="btn pri" id="play">▶ <span id="playTxt">Başlat</span></button>
+    <button class="btn" id="reset">↺ <span id="resetTxt">Sıfırla</span></button>
+    <div class="seg" id="speedSeg">
+      <button data-s="1">1×</button><button data-s="2" class="on">2×</button><button data-s="4">4×</button><button data-s="8">8×</button>
+    </div>
+    <div class="seg" id="langSeg">
+      <button data-l="tr" class="on">TR</button><button data-l="en">EN</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ── SOL: KONFIG ── -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div class="card">
+      <h3><span data-i="cfgTitle">Run konfigürasyonu</span></h3>
+      <div class="body" id="cfgBody"></div>
+    </div>
+
+    <div class="card">
+      <h3><span data-i="scenTitle">Senaryolar</span></h3>
+      <div class="body">
+        <div class="row" style="flex-direction:column">
+          <button class="btn sm" id="addClient">+ <span data-i="sAdd">Client ekle</span></button>
+          <button class="btn sm" id="addSlow">🐢 <span data-i="sSlow">Yavaş client ekle</span></button>
+          <button class="btn sm" id="killOne">✕ <span data-i="sKill">Rastgele client düşür</span></button>
+          <button class="btn sm" id="killMany">⚠ <span data-i="sKillMany">min_clients altına düşür</span></button>
+        </div>
+        <div class="hint" style="color:var(--faint);font-size:10px;margin-top:9px;line-height:1.5" data-i="scenHint">
+          Görselde bir node'a tıklayarak da düşürebilirsin.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ORTA: SAHNE ── -->
+  <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+    <div class="card">
+      <div class="stage">
+        <div class="phaseTag">
+          <div class="p" id="phaseName">WaitingForMembers</div>
+          <div class="r" id="phaseSub">epoch 0 · round 0 · step 0</div>
+        </div>
+        <svg id="viz" viewBox="0 0 660 560"></svg>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--faint)"></i><span data-i="lPend">pending</span></span>
+        <span><i style="background:var(--acc2)"></i><span data-i="lWarm">model yükleniyor</span></span>
+        <span><i style="background:var(--acc)"></i><span data-i="lTrain">training</span></span>
+        <span><i style="background:var(--ok)"></i><span data-i="lDone">sonuç yayınlandı</span></span>
+        <span><i style="background:var(--warn)"></i><span data-i="lWit">witness</span></span>
+        <span><i style="background:var(--bad)"></i><span data-i="lDrop">dropped</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span data-i="fsmTitle">Coordinator state machine</span></h3>
+      <div class="fsm" id="fsm"></div>
+    </div>
+
+    <div class="card">
+      <h3>
+        <span data-i="batchTitle">Batch ataması (bu round)</span>
+        <span class="pill" id="batchInfo">0 / 0</span>
+      </h3>
+      <div class="batches" id="batches"></div>
+      <div class="tip" data-i="batchTip">
+        Coordinator bir random seed verir; her client seed + epoch + round'dan kendi batch aralığını deterministik olarak türetir. Aynı veri iki kez eğitilmez.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SAĞ: TELEMETRİ ── -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div class="card">
+      <h3><span data-i="stTitle">Telemetri</span></h3>
+      <div class="stats" id="stats"></div>
+      <div style="padding:11px 13px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim)">
+          <span data-i="quorumL">Witness quorum</span><b style="font-family:var(--mono);color:var(--acc2)" id="qTxt">0 / 0</b>
+        </div>
+        <div class="meter"><div id="qBar" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:11px">
+          <span data-i="phaseL">Faz süresi</span><b style="font-family:var(--mono);color:var(--acc2)" id="pTxt">0.0s</b>
+        </div>
+        <div class="meter"><div id="pBar" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span data-i="logTitle">Event log</span><button class="btn sm" id="clearLog">clear</button></h3>
+      <div class="log" id="log"></div>
+    </div>
+
+    <div class="card">
+      <h3><span data-i="tomlTitle">config.toml</span><button class="btn sm" id="copy" data-i="copyBtn">Kopyala</button></h3>
+      <pre id="toml"></pre>
+    </div>
+
+    <div class="card">
+      <h3><span data-i="hTitle">Hermes Doctor</span><span class="pill">Nous Inference API</span></h3>
+      <div class="hermes">
+        <div class="lbl" data-i="hKey">API key (sadece bellekte tutulur)</div>
+        <div class="keyrow">
+          <input type="password" id="hKeyIn" placeholder="sk-...">
+          <select id="hModel" style="width:auto;font-size:10.5px">
+            <option>Hermes-4.3-36B</option><option selected>Hermes-4-70B</option><option>Hermes-4-405B</option>
+          </select>
+        </div>
+        <div class="warn-note" data-i="hWarn">Anahtarın tarayıcıdan çıkmaz, hiçbir yere kaydedilmez. Siteyi yayına alırken bunun yerine bir proxy kullan.</div>
+
+        <div class="lbl" data-i="hPaste">Client log / hata mesajı yapıştır</div>
+        <textarea id="hIn" rows="4" placeholder="Error: could not select device driver &quot;&quot; with capabilities: [[gpu]]"></textarea>
+
+        <div class="row">
+          <button class="btn pri sm" id="hDiag" data-i="hDiagBtn">Teşhis et</button>
+          <button class="btn sm" id="hCfg" data-i="hCfgBtn">Konfigimi incele</button>
+        </div>
+        <div class="ans" id="hOut"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ═══════════════════════ i18n ═══════════════════════ */
+const T={
+ tr:{tagline:"coordinator state machine simülatörü",playTxt:"Başlat",pauseTxt:"Duraklat",resetTxt:"Sıfırla",
+  cfgTitle:"Run konfigürasyonu",scenTitle:"Senaryolar",sAdd:"Client ekle",sSlow:"Yavaş client ekle",
+  sKill:"Rastgele client düşür",sKillMany:"min_clients altına düşür",
+  scenHint:"Görselde bir node'a tıklayarak da düşürebilirsin. Run ortasında eklenen client pending kalır ve bir sonraki epoch'ta katılır.",
+  lPend:"pending",lWarm:"model yükleniyor",lTrain:"training",lDone:"sonuç yayınlandı",lWit:"witness",lDrop:"dropped",
+  fsmTitle:"Coordinator state machine",batchTitle:"Batch ataması (bu round)",
+  batchTip:"Coordinator bir random seed verir; her client seed + epoch + round'dan kendi batch aralığını deterministik olarak türetir. Aynı veri iki kez eğitilmez.",
+  stTitle:"Telemetri",quorumL:"Witness quorum",phaseL:"Faz süresi",logTitle:"Event log",tomlTitle:"config.toml",copyBtn:"Kopyala",copied:"Kopyalandı ✓",
+  hTitle:"Hermes Doctor",hKey:"API key (sadece bellekte tutulur)",
+  hWarn:"Anahtarın tarayıcıdan çıkmaz, hiçbir yere kaydedilmez. Siteyi yayına alırken bunun yerine bir proxy kullan.",
+  hPaste:"Client log / hata mesajı yapıştır",hDiagBtn:"Teşhis et",hCfgBtn:"Konfigimi incele",
+  hNoKey:"Önce Nous Portal API anahtarını gir.",hNoIn:"Teşhis için bir log veya hata mesajı yapıştır.",
+  hLoad:"Hermes düşünüyor…",hErr:e=>`İstek başarısız: ${e}`,hLangName:"Türkçe",
+  cEpoch:"Epoch",cRound:"Round",cStep:"Step",cHealthy:"Sağlıklı client",cDropped:"Dropped",cCkpt:"Checkpoint",
+  f:{initMinClients:["init_min_clients","Warmup'a geçmek için gereken minimum client"],
+     minClients:["min_clients","Bunun altına düşerse epoch iptal olur"],
+     witnessNodes:["witness_nodes","0 = herkes witness olur"],
+     warmup:["warmup_time","Modeli indirip GPU'ya yüklemek için tanınan azami süre (sn)"],
+     maxTrain:["max_round_train_time","Bir round'da eğitim için azami süre (sn) — yavaş GPU'ları eler"],
+     witnessTime:["round_witness_time","Witness'ların proof yollaması için süre (sn)"],
+     cooldown:["cooldown_time","Checkpoint yazımı ve epoch kapanışı (sn)"],
+     rounds:["rounds_per_epoch","Bir epoch kaç round sürer"],
+     batch:["global_batch_size","Round başına toplam batch — maksimum client sayını da belirler"],
+     steps:["total_steps","Run bittiğinde ulaşılacak toplam step"]},
+  ev:{join:c=>`client ${c} pending listesine eklendi`,
+      joinNow:c=>`client ${c} run'a katıldı`,
+      warmup:n=>`init_min_clients karşılandı (${n}) → Warmup`,
+      loaded:c=>`client ${c} modeli yükledi`,
+      allLoaded:"tüm clientlar modeli yükledi → RoundTrain (erken geçiş)",
+      warmTO:"warmup_time doldu → RoundTrain",
+      assign:(n,c)=>`${n} batch, ${c} client'a atandı`,
+      wsel:l=>`witness seçildi: ${l}`,
+      trained:(c,b)=>`client ${c} batch ${b} eğitimini bitirdi, p2p broadcast`,
+      proof:c=>`witness ${c} bloom filter proof'u yolladı`,
+      opp:"opportunistic witnessing → quorum sağlandı, RoundWitness",
+      trainTO:"max_round_train_time doldu → RoundWitness",
+      nextRound:s=>`round tamam → RoundTrain (step ${s})`,
+      coolEpoch:"epoch'un son round'u → Cooldown",
+      coolMin:n=>`sağlıklı client ${n} < min_clients → Cooldown`,
+      coolQ:(a,b)=>`witness quorum sağlanamadı (${a}/${b}) → Cooldown`,
+      ckpt:"checkpoint kaydedildi, checkpoint state = P2P",
+      newEpoch:e=>`epoch ${e} başladı → WaitingForMembers`,
+      drop:c=>`client ${c} düştü (dropped)`,
+      wait:(h,n)=>`client sayısı yetersiz (${h}/${n}), bekleniyor`,
+      fin:"total_steps'e ulaşıldı → Finished",
+      slow:c=>`client ${c} round'u zamanında bitiremedi`}},
+
+ en:{tagline:"coordinator state machine simulator",playTxt:"Run",pauseTxt:"Pause",resetTxt:"Reset",
+  cfgTitle:"Run configuration",scenTitle:"Scenarios",sAdd:"Add client",sSlow:"Add slow client",
+  sKill:"Drop random client",sKillMany:"Drop below min_clients",
+  scenHint:"You can also click a node in the graph to drop it. A client added mid-run stays pending and joins next epoch.",
+  lPend:"pending",lWarm:"loading model",lTrain:"training",lDone:"results broadcast",lWit:"witness",lDrop:"dropped",
+  fsmTitle:"Coordinator state machine",batchTitle:"Batch assignment (this round)",
+  batchTip:"The coordinator supplies a random seed; each client derives its batch range deterministically from seed + epoch + round. No data is trained twice.",
+  stTitle:"Telemetry",quorumL:"Witness quorum",phaseL:"Phase timer",logTitle:"Event log",tomlTitle:"config.toml",copyBtn:"Copy",copied:"Copied ✓",
+  hTitle:"Hermes Doctor",hKey:"API key (kept in memory only)",
+  hWarn:"Your key never leaves the browser and is never stored. Use a proxy instead when you deploy this publicly.",
+  hPaste:"Paste a client log / error message",hDiagBtn:"Diagnose",hCfgBtn:"Review my config",
+  hNoKey:"Enter your Nous Portal API key first.",hNoIn:"Paste a log or error message to diagnose.",
+  hLoad:"Hermes is thinking…",hErr:e=>`Request failed: ${e}`,hLangName:"English",
+  cEpoch:"Epoch",cRound:"Round",cStep:"Step",cHealthy:"Healthy clients",cDropped:"Dropped",cCkpt:"Checkpoint",
+  f:{initMinClients:["init_min_clients","Clients required to enter Warmup"],
+     minClients:["min_clients","Epoch aborts if healthy clients fall below this"],
+     witnessNodes:["witness_nodes","0 = every node is a witness"],
+     warmup:["warmup_time","Max seconds to download the model and load it onto the GPU"],
+     maxTrain:["max_round_train_time","Max seconds to train per round — filters out slow GPUs"],
+     witnessTime:["round_witness_time","Seconds for witnesses to publish proofs"],
+     cooldown:["cooldown_time","Checkpointing and epoch teardown (s)"],
+     rounds:["rounds_per_epoch","How many rounds make up one epoch"],
+     batch:["global_batch_size","Total batches per round — also caps your client count"],
+     steps:["total_steps","Total steps before the run finishes"]},
+  ev:{join:c=>`client ${c} added to pending list`,
+      joinNow:c=>`client ${c} joined the run`,
+      warmup:n=>`init_min_clients met (${n}) → Warmup`,
+      loaded:c=>`client ${c} loaded the model`,
+      allLoaded:"all clients loaded the model → RoundTrain (early transition)",
+      warmTO:"warmup_time elapsed → RoundTrain",
+      assign:(n,c)=>`${n} batches assigned across ${c} clients`,
+      wsel:l=>`witnesses elected: ${l}`,
+      trained:(c,b)=>`client ${c} finished batch ${b}, p2p broadcast`,
+      proof:c=>`witness ${c} submitted bloom filter proof`,
+      opp:"opportunistic witnessing → quorum reached, RoundWitness",
+      trainTO:"max_round_train_time elapsed → RoundWitness",
+      nextRound:s=>`round complete → RoundTrain (step ${s})`,
+      coolEpoch:"last round of epoch → Cooldown",
+      coolMin:n=>`healthy clients ${n} < min_clients → Cooldown`,
+      coolQ:(a,b)=>`witness quorum not reached (${a}/${b}) → Cooldown`,
+      ckpt:"checkpoint saved, checkpoint state = P2P",
+      newEpoch:e=>`epoch ${e} started → WaitingForMembers`,
+      drop:c=>`client ${c} dropped`,
+      wait:(h,n)=>`not enough clients (${h}/${n}), waiting`,
+      fin:"total_steps reached → Finished",
+      slow:c=>`client ${c} failed to finish the round in time`}}
+};
+let lang='tr'; const t=()=>T[lang];
+
+/* ═══════════════════════ config ═══════════════════════ */
+const FIELDS=[
+ ['initMinClients',3,1,12,1],['minClients',2,1,12,1],['witnessNodes',2,0,8,1],
+ ['warmup',6,2,30,1],['maxTrain',10,3,60,1],['witnessTime',3,1,20,1],['cooldown',5,2,30,1],
+ ['rounds',4,1,12,1],['batch',12,4,64,2],['steps',80,20,500,10]
+];
+const cfg={}; FIELDS.forEach(([k,d])=>cfg[k]=d);
+
+const MODELS={
+ light :{repo:'emozilla/llama2-20m-init',arch:'HfLlama',seq:2048,lr:'4.0e-4',label:'Light · 20M Llama2 (8GB VRAM)'},
+ mid   :{repo:'NousResearch/Llama-2-7b-hf',arch:'HfLlama',seq:4096,lr:'3.0e-4',label:'Llama 2 · 7B (A100 sınıfı)'},
+ ds    :{repo:'deepseek-ai/DeepSeek-V2-Lite',arch:'HfDeepseek',seq:4096,lr:'2.4e-4',label:'DeepSeek V2 Lite (MoE)'}
+};
+let modelKey='light';
+
+/* ═══════════════════════ sim state ═══════════════════════ */
+const PHASES=['WaitingForMembers','Warmup','RoundTrain','RoundWitness','Cooldown','Finished'];
+let S, playing=false, speed=2, packets=[], nextId=1, logs=[];
+
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let r=Math.imul(a^a>>>15,1|a);r=r+Math.imul(r^r>>>7,61|r)^r;return((r^r>>>14)>>>0)/4294967296}}
+
+function mkClient(slow=false,pending=false){
+  return{id:nextId++,st:pending?'pending':'healthy',load:0,loadNeed:1.5+Math.random()*3.5,
+    train:0,trainNeed:slow?9+Math.random()*8:2.5+Math.random()*4.5,slow,
+    batches:[],done:false,witness:false,proof:false,seen:new Set(),ang:0}
+}
+function reset(){
+  nextId=1;packets=[];logs=[];
+  S={ph:'WaitingForMembers',t:0,epoch:0,round:0,step:0,roundInEpoch:0,
+     clients:Array.from({length:Math.max(cfg.initMinClients,3)},()=>mkClient()),
+     ckpt:'Hub',assigned:[],doneBatches:new Set(),simT:0,witnessList:[]};
+  log(t().ev.wait(S.clients.length,cfg.initMinClients),'i');
+  render();
+}
+function log(m,l='i'){
+  logs.push({t:S?S.simT:0,m,l});
+  if(logs.length>300)logs.shift();
+  const el=document.getElementById('log');
+  if(!el)return;
+  el.innerHTML=logs.slice(-120).map(x=>`<div><span class="ts">${x.t.toFixed(1).padStart(6)}s</span><span class="${x.l}">${x.m}</span></div>`).join('');
+  el.scrollTop=el.scrollHeight;
+}
+const healthy=()=>S.clients.filter(c=>c.st!=='dropped'&&c.st!=='pending');
+const witnessCount=()=>cfg.witnessNodes===0?healthy().length:Math.min(cfg.witnessNodes,healthy().length);
+const quorum=()=>Math.max(1,Math.ceil(witnessCount()*2/3));
+
+/* ═══════════════════════ transitions ═══════════════════════ */
+function goto(ph){S.ph=ph;S.t=0}
+
+function startRound(){
+  const h=healthy();
+  h.forEach(c=>{c.train=0;c.done=false;c.proof=false;c.witness=false;c.batches=[];c.seen=new Set();c.st='training'});
+  const r=rng(S.epoch*7919+S.round*104729);
+  // deterministic batch assignment
+  S.assigned=Array.from({length:cfg.batch},(_,i)=>i);
+  S.doneBatches=new Set();
+  S.assigned.forEach((b,i)=>{ if(h.length) h[i%h.length].batches.push(b) });
+  // witness election from the same seed
+  const pool=[...h].sort(()=>r()-.5);
+  S.witnessList=pool.slice(0,witnessCount()).map(c=>c.id);
+  h.forEach(c=>c.witness=S.witnessList.includes(c.id));
+  log(t().ev.assign(cfg.batch,h.length),'i');
+  log(t().ev.wsel(S.witnessList.map(i=>'#'+i).join(', ')),'a');
+  goto('RoundTrain');
+}
+
+function step(dt){
+  S.simT+=dt;S.t+=dt;
+  // packets
+  packets.forEach(p=>p.p+=dt/p.dur);
+  packets.filter(p=>p.p>=1).forEach(p=>{
+    const to=S.clients.find(c=>c.id===p.to);
+    if(to&&to.st!=='dropped'){p.b.forEach(b=>to.seen.add(b))}
+  });
+  packets=packets.filter(p=>p.p<1);
+
+  const h=healthy();
+
+  switch(S.ph){
+  case 'WaitingForMembers':{
+    S.clients.filter(c=>c.st==='pending').forEach(c=>{c.st='healthy';log(t().ev.joinNow('#'+c.id),'g')});
+    if(healthy().length>=cfg.initMinClients){
+      log(t().ev.warmup(healthy().length),'g');
+      healthy().forEach(c=>{c.load=0;c.st='warming'});
+      goto('Warmup');
+    }
+    break}
+
+  case 'Warmup':{
+    h.forEach(c=>{
+      if(c.st==='warming'){c.load+=dt;if(c.load>=c.loadNeed){c.st='ready';log(t().ev.loaded('#'+c.id),'i')}}
+    });
+    if(h.length<cfg.minClients){log(t().ev.wait(h.length,cfg.minClients),'w');goto('WaitingForMembers');break}
+    if(h.every(c=>c.st==='ready')){log(t().ev.allLoaded,'g');startRound();break}
+    if(S.t>=cfg.warmup){log(t().ev.warmTO,'w');startRound()}
+    break}
+
+  case 'RoundTrain':{
+    h.forEach(c=>{
+      if(c.done)return;
+      c.train+=dt;
+      if(c.train>=c.trainNeed){
+        c.done=true;c.st='done';
+        c.batches.forEach(b=>S.doneBatches.add(b));
+        log(t().ev.trained('#'+c.id,c.batches.join(',')||'—'),'g');
+        h.filter(o=>o.id!==c.id).forEach(o=>packets.push({from:c.id,to:o.id,p:0,dur:.9,b:c.batches}));
+        c.batches.forEach(b=>c.seen.add(b));
+      }
+    });
+    // witnesses fire once they've seen every batch
+    h.filter(c=>c.witness&&!c.proof&&c.done).forEach(c=>{
+      if(S.assigned.every(b=>c.seen.has(b))){c.proof=true;log(t().ev.proof('#'+c.id),'a')}
+    });
+    const p=h.filter(c=>c.proof).length;
+    if(p>=quorum()){log(t().ev.opp,'g');goto('RoundWitness');break}
+    if(S.t>=cfg.maxTrain){
+      h.filter(c=>!c.done).forEach(c=>log(t().ev.slow('#'+c.id),'w'));
+      log(t().ev.trainTO,'w');goto('RoundWitness');
+    }
+    break}
+
+  case 'RoundWitness':{
+    h.filter(c=>c.witness&&!c.proof&&c.done).forEach(c=>{c.proof=true;log(t().ev.proof('#'+c.id),'a')});
+    if(S.t>=cfg.witnessTime){
+      const p=h.filter(c=>c.proof).length,q=quorum();
+      S.step++;S.round++;S.roundInEpoch++;
+      if(S.step>=cfg.steps){log(t().ev.fin,'g');goto('Finished');break}
+      if(h.length<cfg.minClients){log(t().ev.coolMin(h.length),'e');goto('Cooldown');break}
+      if(p<q){log(t().ev.coolQ(p,q),'e');goto('Cooldown');break}
+      if(S.roundInEpoch>=cfg.rounds){log(t().ev.coolEpoch,'w');goto('Cooldown');break}
+      log(t().ev.nextRound(S.step),'i');startRound();
+    }
+    break}
+
+  case 'Cooldown':{
+    h.forEach(c=>c.st='cooling');
+    if(S.t>=cfg.cooldown){
+      S.ckpt='P2P';log(t().ev.ckpt,'g');
+      S.epoch++;S.roundInEpoch=0;
+      log(t().ev.newEpoch(S.epoch),'a');
+      S.clients.filter(c=>c.st!=='dropped').forEach(c=>c.st='healthy');
+      packets=[];goto('WaitingForMembers');
+    }
+    break}
+  }
+}
+
+/* ═══════════════════════ render ═══════════════════════ */
+const NS='http://www.w3.org/2000/svg';
+const COL={pending:'#5a6178',warming:'#00d4ff',ready:'#00d4ff',training:'#7c5cff',done:'#22d39a',cooling:'#ffb020',healthy:'#8d95ad',dropped:'#ff5470'};
+const PHCOL={WaitingForMembers:'#8d95ad',Warmup:'#00d4ff',RoundTrain:'#7c5cff',RoundWitness:'#ffb020',Cooldown:'#22d39a',Finished:'#22d39a'};
+
+function render(){
+  const svg=document.getElementById('viz');
+  const CX=330,CY=270,R=195;
+  const list=S.clients;
+  list.forEach((c,i)=>c.ang=-Math.PI/2+i*2*Math.PI/Math.max(list.length,1));
+  const pos=c=>[CX+R*Math.cos(c.ang),CY+R*Math.sin(c.ang)];
+
+  let s=`<defs>
+    <radialGradient id="core"><stop offset="0%" stop-color="${PHCOL[S.ph]}" stop-opacity=".55"/><stop offset="100%" stop-color="${PHCOL[S.ph]}" stop-opacity="0"/></radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
+
+  s+=`<circle cx="${CX}" cy="${CY}" r="150" fill="url(#core)"/>`;
+  s+=`<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="#222839" stroke-width="1" stroke-dasharray="3 5"/>`;
+
+  // phase progress arc
+  const lim={Warmup:cfg.warmup,RoundTrain:cfg.maxTrain,RoundWitness:cfg.witnessTime,Cooldown:cfg.cooldown}[S.ph];
+  if(lim){
+    const f=Math.min(S.t/lim,1),a=-Math.PI/2+f*2*Math.PI,r2=R+22;
+    const large=f>.5?1:0;
+    s+=`<path d="M ${CX} ${CY-r2} A ${r2} ${r2} 0 ${large} 1 ${CX+r2*Math.cos(a)} ${CY+r2*Math.sin(a)}"
+         fill="none" stroke="${PHCOL[S.ph]}" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>`;
+  }
+
+  // links coordinator -> clients
+  list.forEach(c=>{const[x,y]=pos(c);
+    s+=`<line x1="${CX}" y1="${CY}" x2="${x}" y2="${y}" stroke="${c.st==='dropped'?'#2a1520':'#1b2032'}" stroke-width="1"/>`});
+
+  // p2p packets
+  packets.forEach(p=>{
+    const a=list.find(c=>c.id===p.from),b=list.find(c=>c.id===p.to); if(!a||!b)return;
+    const[x1,y1]=pos(a),[x2,y2]=pos(b);
+    const mx=(x1+x2)/2*.55+CX*.45,my=(y1+y2)/2*.55+CY*.45,u=p.p;
+    const x=(1-u)*(1-u)*x1+2*(1-u)*u*mx+u*u*x2, y=(1-u)*(1-u)*y1+2*(1-u)*u*my+u*u*y2;
+    s+=`<circle cx="${x}" cy="${y}" r="3" fill="#22d39a" filter="url(#glow)" opacity=".9"/>`;
+  });
+
+  // coordinator core
+  const hex=Array.from({length:6},(_,i)=>{const a=Math.PI/3*i-Math.PI/2;return`${CX+46*Math.cos(a)},${CY+46*Math.sin(a)}`}).join(' ');
+  s+=`<polygon points="${hex}" fill="#0e1018" stroke="${PHCOL[S.ph]}" stroke-width="2" filter="url(#glow)"/>
+      <text x="${CX}" y="${CY-4}" text-anchor="middle" fill="#8d95ad" font-size="8.5" font-family="ui-monospace,monospace" letter-spacing="1.2">COORDINATOR</text>
+      <text x="${CX}" y="${CY+11}" text-anchor="middle" fill="${PHCOL[S.ph]}" font-size="13" font-weight="700" font-family="ui-monospace,monospace">${S.step}</text>
+      <text x="${CX}" y="${CY+24}" text-anchor="middle" fill="#5a6178" font-size="7.5" font-family="ui-monospace,monospace">/${cfg.steps} steps</text>`;
+
+  // clients
+  list.forEach(c=>{
+    const[x,y]=pos(c),col=COL[c.st]||'#8d95ad';
+    if(c.witness&&c.st!=='dropped')
+      s+=`<circle cx="${x}" cy="${y}" r="27" fill="none" stroke="#ffb020" stroke-width="1.5" stroke-dasharray="4 3" opacity=".85"/>`;
+    if(c.proof) s+=`<circle cx="${x}" cy="${y}" r="33" fill="none" stroke="#ffb020" stroke-width="1" opacity=".35"/>`;
+    s+=`<g class="node" data-id="${c.id}" style="cursor:pointer">
+      <circle cx="${x}" cy="${y}" r="20" fill="#0e1018" stroke="${col}" stroke-width="2" ${c.st==='training'?'filter="url(#glow)"':''} opacity="${c.st==='dropped'?.4:1}"/>`;
+    if(c.st==='training'||c.st==='warming'){
+      const f=c.st==='training'?Math.min(c.train/c.trainNeed,1):Math.min(c.load/c.loadNeed,1);
+      const C=2*Math.PI*20;
+      s+=`<circle cx="${x}" cy="${y}" r="20" fill="none" stroke="${col}" stroke-width="3"
+           stroke-dasharray="${C}" stroke-dashoffset="${C*(1-f)}" transform="rotate(-90 ${x} ${y})" opacity=".95"/>`;
+    }
+    s+=`<text x="${x}" y="${y+4}" text-anchor="middle" fill="${col}" font-size="11" font-weight="700" font-family="ui-monospace,monospace" opacity="${c.st==='dropped'?.5:1}">${c.id}</text>`;
+    if(c.slow) s+=`<text x="${x}" y="${y+34}" text-anchor="middle" font-size="11">🐢</text>`;
+    if(c.st==='dropped') s+=`<text x="${x}" y="${y-27}" text-anchor="middle" fill="#ff5470" font-size="8" font-family="ui-monospace,monospace">DROPPED</text>`;
+    s+=`</g>`;
+  });
+  svg.innerHTML=s;
+  svg.querySelectorAll('.node').forEach(n=>n.onclick=()=>drop(+n.dataset.id));
+
+  // header
+  document.getElementById('phaseName').textContent=S.ph;
+  document.getElementById('phaseName').style.color=PHCOL[S.ph];
+  document.getElementById('phaseSub').textContent=`epoch ${S.epoch} · round ${S.round} · step ${S.step} · ckpt ${S.ckpt}`;
+
+  // stats
+  const st=[[t().cEpoch,S.epoch],[t().cRound,`${S.roundInEpoch}/${cfg.rounds}`],[t().cStep,`${S.step}/${cfg.steps}`],
+            [t().cHealthy,healthy().length],[t().cDropped,S.clients.filter(c=>c.st==='dropped').length],[t().cCkpt,S.ckpt]];
+  document.getElementById('stats').innerHTML=st.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+
+  const p=healthy().filter(c=>c.proof).length,q=quorum();
+  document.getElementById('qTxt').textContent=`${p} / ${q}`;
+  document.getElementById('qBar').style.width=Math.min(p/q*100,100)+'%';
+  document.getElementById('pTxt').textContent=lim?`${S.t.toFixed(1)}s / ${lim}s`:`${S.t.toFixed(1)}s`;
+  document.getElementById('pBar').style.width=lim?Math.min(S.t/lim*100,100)+'%':'0%';
+
+  // batches
+  document.getElementById('batchInfo').textContent=`${S.doneBatches.size} / ${S.assigned.length}`;
+  document.getElementById('batches').innerHTML=S.assigned.map(b=>{
+    const owner=healthy().find(c=>c.batches.includes(b));
+    return `<div class="b ${S.doneBatches.has(b)?'done':owner?'assigned':''}" title="batch ${b}${owner?' → client #'+owner.id:''}">${b}</div>`
+  }).join('')||`<span style="color:var(--faint);font-size:11px">—</span>`;
+
+  // fsm
+  document.getElementById('fsm').innerHTML=PHASES.map((x,i)=>
+    `${i?'<span class="ar">→</span>':''}<span class="n ${x===S.ph?'on':''}">${x}</span>`).join('');
+}
+
+function drop(id){
+  const c=S.clients.find(x=>x.id===id); if(!c||c.st==='dropped')return;
+  c.st='dropped';c.witness=false;c.proof=false;
+  log(t().ev.drop('#'+id),'e');render();
+}
+
+/* ═══════════════════════ toml ═══════════════════════ */
+function toml(){
+  const m=MODELS[modelKey];
+  const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const c=x=>`<span class="c">${esc(x)}</span>`,k=x=>`<span class="k">${esc(x)}</span>`,
+        s=x=>`<span class="s">"${esc(x)}"</span>`,n=x=>`<span class="n">${x}</span>`;
+  return `${c('# generated by Psyche Protocol Lab')}
+[config]
+${k('warmup_time')} = ${n(cfg.warmup)}
+${k('cooldown_time')} = ${n(cfg.cooldown)}
+${k('max_round_train_time')} = ${n(cfg.maxTrain)}
+${k('round_witness_time')} = ${n(cfg.witnessTime)}
+${k('rounds_per_epoch')} = ${n(cfg.rounds)}
+${k('min_clients')} = ${n(cfg.minClients)}
+${k('init_min_clients')} = ${n(cfg.initMinClients)}
+${k('verification_percent')} = ${n(0)}
+${k('witness_nodes')} = ${n(cfg.witnessNodes)}
+${k('global_batch_size_start')} = ${n(cfg.batch)}
+${k('global_batch_size_end')} = ${n(cfg.batch)}
+${k('global_batch_size_warmup_tokens')} = ${n(0)}
+${k('total_steps')} = ${n(cfg.steps)}
+
+[model.LLM]
+${k('architecture')} = ${s(m.arch)}
+${k('data_type')} = ${s('Pretraining')}
+${k('max_seq_len')} = ${n(m.seq)}
+
+[model.LLM.checkpoint.Hub]
+${k('repo_id')} = ${s(m.repo)}
+
+[model.LLM.data_location.Http]
+${k('token_size_in_bytes')} = ${s('TwoBytes')}
+${k('shuffle')} = ${s('DontShuffle')}
+
+[model.LLM.data_location.Http.location.Gcp]
+${k('bucket_name')} = ${s('nous-pretraining-public-us')}
+${k('filter_directory')} = ${s('fineweb-edu-tokenized-llama2')}
+
+[model.LLM.lr_schedule.Cosine]
+${k('base_lr')} = ${n(m.lr)}
+${k('warmup_steps')} = ${n(Math.max(1,Math.round(cfg.steps*.05)))}
+${k('warmup_init_lr')} = ${n('0.0')}
+${k('total_steps')} = ${n(cfg.steps)}
+${k('final_lr')} = ${n(m.lr.replace(/^(\d)\.(\d)e-4$/,'$1.$2e-5'))}
+
+${c('# only DisTrO is supported on Psyche')}
+[model.LLM.optimizer.Distro]
+${k('clip_grad_norm')} = ${n('1.0')}
+${k('compression_decay')} = ${n('0.999')}
+${k('compression_chunk')} = ${n(64)}
+${k('compression_topk')} = ${n(8)}
+${k('quantize_1bit')} = ${s('true').replace(/"/g,'')}`;
+}
+function plainToml(){return document.getElementById('toml').textContent}
+
+/* ═══════════════════════ ui ═══════════════════════ */
+function buildCfg(){
+  const b=document.getElementById('cfgBody');
+  b.innerHTML=`<div class="field"><label>model preset</label><select id="mSel">
+    ${Object.entries(MODELS).map(([k,v])=>`<option value="${k}" ${k===modelKey?'selected':''}>${v.label}</option>`).join('')}
+  </select></div>`+
+  FIELDS.map(([key,d,mn,mx,st])=>{
+    const[n,h]=t().f[key];
+    return `<div class="field">
+      <label><span>${n}</span><b id="v_${key}">${cfg[key]}</b></label>
+      <input type="range" id="r_${key}" min="${mn}" max="${mx}" step="${st}" value="${cfg[key]}">
+      <div class="hint">${h}</div></div>`
+  }).join('');
+  document.getElementById('mSel').onchange=e=>{modelKey=e.target.value;paintToml()};
+  FIELDS.forEach(([key])=>{
+    document.getElementById('r_'+key).oninput=e=>{
+      cfg[key]=+e.target.value;document.getElementById('v_'+key).textContent=cfg[key];
+      if(key==='initMinClients'&&cfg.minClients>cfg.initMinClients){cfg.minClients=cfg.initMinClients;
+        document.getElementById('r_minClients').value=cfg.minClients;document.getElementById('v_minClients').textContent=cfg.minClients}
+      paintToml();render();
+    };
+  });
+}
+function paintToml(){document.getElementById('toml').innerHTML=toml()}
+
+function applyLang(){
+  document.documentElement.lang=lang;
+  document.getElementById('tagline').textContent=t().tagline;
+  document.getElementById('playTxt').textContent=playing?t().pauseTxt:t().playTxt;
+  document.getElementById('resetTxt').textContent=t().resetTxt;
+  document.querySelectorAll('[data-i]').forEach(el=>{const v=t()[el.dataset.i];if(v)el.textContent=v});
+  buildCfg();paintToml();render();
+}
+
+document.getElementById('play').onclick=()=>{
+  playing=!playing;
+  document.getElementById('play').innerHTML=(playing?'⏸ ':'▶ ')+`<span id="playTxt">${playing?t().pauseTxt:t().playTxt}</span>`;
+};
+document.getElementById('reset').onclick=()=>{reset();paintToml()};
+document.getElementById('clearLog').onclick=()=>{logs=[];document.getElementById('log').innerHTML=''};
+document.getElementById('copy').onclick=async e=>{
+  await navigator.clipboard.writeText(plainToml());
+  const b=e.currentTarget,o=b.textContent;b.textContent=t().copied;setTimeout(()=>b.textContent=o,1400);
+};
+document.getElementById('speedSeg').onclick=e=>{
+  const b=e.target.closest('button');if(!b)return;
+  speed=+b.dataset.s;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));
+};
+document.getElementById('langSeg').onclick=e=>{
+  const b=e.target.closest('button');if(!b)return;
+  lang=b.dataset.l;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));applyLang();
+};
+document.getElementById('addClient').onclick=()=>{
+  const mid=S.ph!=='WaitingForMembers';
+  const c=mkClient(false,mid);S.clients.push(c);
+  log(mid?t().ev.join('#'+c.id):t().ev.joinNow('#'+c.id),mid?'w':'g');render();
+};
+document.getElementById('addSlow').onclick=()=>{
+  const mid=S.ph!=='WaitingForMembers';
+  const c=mkClient(true,mid);S.clients.push(c);
+  log(mid?t().ev.join('#'+c.id):t().ev.joinNow('#'+c.id),'w');render();
+};
+document.getElementById('killOne').onclick=()=>{const h=healthy();if(h.length)drop(h[Math.floor(Math.random()*h.length)].id)};
+document.getElementById('killMany').onclick=()=>{
+  const h=healthy();h.slice(0,Math.max(0,h.length-cfg.minClients+1)).forEach(c=>drop(c.id));
+};
+
+/* ═══════════════════════ Hermes Doctor ═══════════════════════ */
+/* Deploy edeceksen buraya Worker URL'ini yaz; boş bırakırsan kullanıcı kendi anahtarını girer.
+   Örn: const PROXY_URL='https://psyche-lab-proxy.<hesabin>.workers.dev'; */
+const PROXY_URL='';
+const ENDPOINT='https://inference-api.nousresearch.com/v1/chat/completions';
+
+const KB=`You are Hermes, embedded in "Psyche Protocol Lab" as a support agent for Nous Research's Psyche
+decentralized training network. Answer ONLY about Psyche node operation and run configuration.
+Be terse and concrete: name the cause, give the exact command or config change, nothing else.
+
+KNOWN FAILURES AND FIXES
+- 'could not select device driver "" with capabilities: [[gpu]]' -> NVIDIA Container Toolkit missing/misconfigured.
+  Verify with: docker run --rm --gpus all nvidia/cuda:12.2.2-devel-ubuntu22.04 nvidia-smi
+- 'permission denied ... docker daemon socket' -> user not in docker group.
+  sudo usermod -aG docker $USER, then log out and back in.
+- 'Failed to read wallet file from: <path>' -> WALLET_PRIVATE_KEY_PATH wrong. Check with ls -l; chmod 600 the keypair.
+- 'RPC error: failed to get account' / timeouts -> public devnet RPC rate limits.
+  Use https://api.devnet.solana.com + wss://api.devnet.solana.com, set RPC_2/WS_RPC_2 fallbacks,
+  or move to a dedicated provider (Helius, QuickNode, Triton).
+- Authorization / permission errors on join -> key not whitelisted. Verify:
+  run-manager can-join --rpc <RPC> --run-id <ID> --authorizer <AUTH> --address <PUBKEY>
+  On permissioned runs the admin must run join-authorization-create for your master pubkey.
+- Container restart loop with "version mismatch" -> image pull problem. Check connectivity,
+  docker pull hello-world, df -h for disk space, docker system df.
+- CUDA OOM / container dies during warmup -> lower MICRO_BATCH_SIZE, or raise TENSOR_PARALLELISM
+  to split the model across GPUs.
+- Multiple machines on ONE keypair -> not allowed. Generate delegate keys, register them with
+  run-manager join-authorization-delegate --delegates-added <PUBKEYS>, and set AUTHORIZER to the MASTER pubkey.
+- Process hangs, no new logs -> Ctrl+C run-manager, then docker ps / docker stop <ID>.
+- Rewards: run-manager treasurer-claim-rewards --rpc <RPC> --run-id <ID> --wallet-private-key-path <KEY>
+
+PROTOCOL RULES (for config review)
+- States: WaitingForMembers -> Warmup -> RoundTrain -> RoundWitness -> (RoundTrain | Cooldown) -> WaitingForMembers.
+- init_min_clients must be >= min_clients. If healthy clients drop below min_clients the epoch aborts to Cooldown.
+- witness_nodes = 0 means every node is a witness. Quorum is roughly two thirds of the witnesses;
+  too few witness_nodes plus one slow node means quorum is missed and the epoch is wasted.
+- max_round_train_time caps which GPUs can keep up. Setting it low silently excludes slower hardware.
+- global_batch_size caps the client count: batches are split across clients, so more clients than
+  batches leaves nodes idle.
+- Only the DisTrO optimizer is supported. verification_percent must stay 0 for now.
+- First epoch pulls the model from HuggingFace; later epochs share it P2P during Warmup.`;
+
+/* proxy varsa anahtar alanını gizle */
+if(PROXY_URL){
+  document.querySelector('.keyrow input').closest('.hermes').querySelector('.lbl').style.display='none';
+  document.getElementById('hKeyIn').style.display='none';
+  document.querySelector('.warn-note').style.display='none';
+}
+
+async function ask(userMsg){
+  const key=document.getElementById('hKeyIn').value.trim();
+  const out=document.getElementById('hOut');
+  if(!PROXY_URL&&!key){out.textContent=t().hNoKey;return}
+  out.textContent=t().hLoad;
+  try{
+    const r=await fetch(PROXY_URL||ENDPOINT,{
+      method:'POST',
+      headers:PROXY_URL?{'Content-Type':'application/json'}
+                       :{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({
+        model:document.getElementById('hModel').value,
+        temperature:.3,max_tokens:700,
+        messages:[
+          {role:'system',content:KB+`\n\nAlways reply in ${t().hLangName}.`},
+          {role:'user',content:userMsg}
+        ]
+      })
+    });
+    if(!r.ok){out.textContent=t().hErr(`HTTP ${r.status} — ${(await r.text()).slice(0,300)}`);return}
+    const j=await r.json();
+    out.textContent=j?.choices?.[0]?.message?.content||JSON.stringify(j).slice(0,600);
+  }catch(e){
+    out.textContent=t().hErr(e.message)+
+      '\n\n⚠ Tarayıcıdan doğrudan çağrı CORS nedeniyle engellenmiş olabilir. '+
+      'Bu durumda anahtarı tutan küçük bir proxy (Cloudflare Worker / Vercel function) gerekiyor.';
+  }
+}
+
+document.getElementById('hDiag').onclick=()=>{
+  const v=document.getElementById('hIn').value.trim();
+  if(!v){document.getElementById('hOut').textContent=t().hNoIn;return}
+  ask(`A Psyche node operator hit this. Diagnose the root cause and give the exact fix:\n\n\`\`\`\n${v}\n\`\`\``);
+};
+
+document.getElementById('hCfg').onclick=()=>{
+  const recent=logs.slice(-25).map(x=>`${x.t.toFixed(1)}s ${x.m}`).join('\n');
+  ask(`Review this Psyche run configuration and the simulated outcome.
+List concrete problems and the values you would change. If it looks sound, say so briefly.
+
+CONFIG
+init_min_clients=${cfg.initMinClients}, min_clients=${cfg.minClients}, witness_nodes=${cfg.witnessNodes}
+warmup_time=${cfg.warmup}, max_round_train_time=${cfg.maxTrain}, round_witness_time=${cfg.witnessTime}
+cooldown_time=${cfg.cooldown}, rounds_per_epoch=${cfg.rounds}
+global_batch_size=${cfg.batch}, total_steps=${cfg.steps}
+model=${MODELS[modelKey].repo} (${MODELS[modelKey].arch})
+
+SIMULATION STATE
+phase=${S.ph}, epoch=${S.epoch}, step=${S.step}/${cfg.steps}
+healthy clients=${healthy().length}, dropped=${S.clients.filter(c=>c.st==='dropped').length}
+witnesses=${witnessCount()}, quorum needed=${quorum()}
+
+RECENT EVENTS
+${recent}`);
+};
+
+/* loop */
+let last=performance.now();
+function frame(now){
+  const dt=Math.min((now-last)/1000,.1);last=now;
+  if(playing&&S.ph!=='Finished'){step(dt*speed);render()}
+  requestAnimationFrame(frame);
+}
+reset();applyLang();requestAnimationFrame(frame);
+</script>
+</body>
+</html>
